@@ -10,7 +10,11 @@ const navigation = [
   { name: "Usuarios", href: "/users", icon: Users },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const { logout } = useAuth();
 
   return (
@@ -25,6 +29,7 @@ export function Sidebar() {
             key={item.href}
             to={item.href}
             end={item.href === "/"}
+            onClick={onNavigate}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",

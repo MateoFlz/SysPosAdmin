@@ -50,15 +50,15 @@ export function CompaniesPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[800px] text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-muted-foreground">
                       <th className="p-4 font-medium">Nombre</th>
                       <th className="p-4 font-medium">NIT</th>
-                      <th className="p-4 font-medium">Ciudad</th>
-                      <th className="p-4 font-medium">Tipo</th>
+                      <th className="p-4 font-medium hidden md:table-cell">Ciudad</th>
+                      <th className="p-4 font-medium hidden md:table-cell">Tipo</th>
                       <th className="p-4 font-medium">Estado</th>
-                      <th className="p-4 font-medium">Creada</th>
+                      <th className="p-4 font-medium hidden md:table-cell">Creada</th>
                       <th className="p-4 font-medium">Acciones</th>
                     </tr>
                   </thead>
@@ -75,8 +75,8 @@ export function CompaniesPage() {
                         <td className="p-4">
                           {company.identificationNumber}
                         </td>
-                        <td className="p-4">{company.city ?? "—"}</td>
-                        <td className="p-4">{company.businessTypeName}</td>
+                        <td className="p-4 hidden md:table-cell">{company.city ?? "—"}</td>
+                        <td className="p-4 hidden md:table-cell">{company.businessTypeName}</td>
                         <td className="p-4">
                           <Badge
                             variant={company.isActive ? "success" : "danger"}
@@ -84,7 +84,7 @@ export function CompaniesPage() {
                             {company.isActive ? "Activa" : "Inactiva"}
                           </Badge>
                         </td>
-                        <td className="p-4 text-muted-foreground">
+                        <td className="p-4 text-muted-foreground hidden md:table-cell">
                           {formatDate(company.createdAt)}
                         </td>
                         <td className="p-4">

@@ -14,7 +14,9 @@ import { Button } from "@/components/ui/Button.tsx";
 import { Spinner } from "@/components/ui/Spinner.tsx";
 import { Pagination } from "@/components/ui/Pagination.tsx";
 import { SearchInput } from "@/components/ui/SearchInput.tsx";
+import { Drawer } from "@/components/ui/Drawer.tsx";
 import { Modal } from "@/components/ui/Modal.tsx";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog.tsx";
 import { Input } from "@/components/ui/Input.tsx";
 import { Select } from "@/components/ui/Select.tsx";
 import { formatDate } from "@/lib/utils.ts";
@@ -23,8 +25,12 @@ import type { CreatedUser } from "@/types/user.ts";
 export function UsersPage() {
   const [pageNumber, setPageNumber] = useState(1);
   const [search, setSearch] = useState("");
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateDrawer, setShowCreateDrawer] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreatedUser | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const { data, isLoading } = useUsers({
     pageNumber,
@@ -39,10 +45,17 @@ export function UsersPage() {
     setPageNumber(1);
   }
 
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    deleteUser.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    });
+  }
+
   return (
     <>
       <Header title="Usuarios">
-        <Button size="sm" onClick={() => setShowCreateModal(true)}>
+        <Button size="sm" onClick={() => setShowCreateDrawer(true)}>
           <Plus className="h-4 w-4" />
           Crear usuario
         </Button>
@@ -64,15 +77,19 @@ export function UsersPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[800px] text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-muted-foreground">
                       <th className="p-4 font-medium">Nombre</th>
                       <th className="p-4 font-medium">Email</th>
-                      <th className="p-4 font-medium">Empresa</th>
+                      <th className="p-4 font-medium hidden md:table-cell">
+                        Empresa
+                      </th>
                       <th className="p-4 font-medium">Rol</th>
                       <th className="p-4 font-medium">Estado</th>
-                      <th className="p-4 font-medium">Creado</th>
+                      <th className="p-4 font-medium hidden md:table-cell">
+                        Creado
+                      </th>
                       <th className="p-4 font-medium">Acciones</th>
                     </tr>
                   </thead>
@@ -80,11 +97,11 @@ export function UsersPage() {
                     {data?.data.map((user) => (
                       <tr
                         key={user.id}
-                        className="border-b border-border last:border-0"
+                        className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors"
                       >
                         <td className="p-4 font-medium">{user.name}</td>
                         <td className="p-4">{user.email}</td>
-                        <td className="p-4">
+                        <td className="p-4 hidden md:table-cell">
                           {user.companyName ?? "—"}
                         </td>
                         <td className="p-4">
@@ -97,7 +114,7 @@ export function UsersPage() {
                             {user.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </td>
-                        <td className="p-4 text-muted-foreground">
+                        <td className="p-4 text-muted-foreground hidden md:table-cell">
                           {formatDate(user.createdAt)}
                         </td>
                         <td className="p-4">
@@ -113,15 +130,12 @@ export function UsersPage() {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `¿Eliminar a ${user.name}? Esta acción no se puede deshacer.`,
-                                  )
-                                ) {
-                                  deleteUser.mutate(user.id);
-                                }
-                              }}
+                              onClick={() =>
+                                setDeleteTarget({
+                                  id: user.id,
+                                  name: user.name,
+                                })
+                              }
                               disabled={deleteUser.isPending}
                             >
                               Eliminar
@@ -152,15 +166,17 @@ export function UsersPage() {
         </Card>
       </div>
 
-      <CreateUserModal
-        open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+      {/* Create user drawer */}
+      <CreateUserDrawer
+        open={showCreateDrawer}
+        onClose={() => setShowCreateDrawer(false)}
         onCreated={(user) => {
-          setShowCreateModal(false);
+          setShowCreateDrawer(false);
           setCreatedUser(user);
         }}
       />
 
+      {/* Created user credentials modal */}
       <Modal
         open={!!createdUser}
         onClose={() => setCreatedUser(null)}
@@ -199,11 +215,29 @@ export function UsersPage() {
           </div>
         )}
       </Modal>
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar usuario"
+        message={
+          <>
+            ¿Estás seguro de eliminar a{" "}
+            <strong>{deleteTarget?.name}</strong>? Esta acción no se puede
+            deshacer.
+          </>
+        }
+        confirmText="Eliminar"
+        variant="destructive"
+        loading={deleteUser.isPending}
+      />
     </>
   );
 }
 
-function CreateUserModal({
+function CreateUserDrawer({
   open,
   onClose,
   onCreated,
@@ -241,7 +275,12 @@ function CreateUserModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Crear usuario">
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="Crear usuario"
+      description="Complete los datos para crear un nuevo usuario en el sistema."
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Nombre"
@@ -290,19 +329,28 @@ function CreateUserModal({
           </p>
         )}
 
-        <div className="flex gap-3 justify-end">
-          <Button type="button" variant="outline" onClick={onClose}>
+        <div className="flex gap-3 pt-4 border-t border-border">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={onClose}
+          >
             Cancelar
           </Button>
-          <Button type="submit" disabled={createUser.isPending}>
+          <Button
+            type="submit"
+            className="flex-1"
+            disabled={createUser.isPending}
+          >
             {createUser.isPending ? (
               <Spinner className="h-4 w-4" />
             ) : (
-              "Crear"
+              "Crear usuario"
             )}
           </Button>
         </div>
       </form>
-    </Modal>
+    </Drawer>
   );
 }
